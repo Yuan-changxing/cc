@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄钟</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .timer-display {
+            font-size: 80px;
+            font-weight: 300;
+            color: #333;
+            margin: 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status {
+            font-size: 18px;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-pause {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-reset {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-reset:hover {
+            background: #d0d0d0;
+        }
+
+        .session-info {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .session-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            transition: background 0.3s ease;
+        }
+
+        .session-dot.completed {
+            background: #667eea;
+        }
+
+        .session-dot.current {
+            background: #764ba2;
+            box-shadow: 0 0 10px rgba(118, 75, 162, 0.5);
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .mode-btn {
+            padding: 8px 20px;
+            font-size: 14px;
+            background: #f0f0f0;
+            color: #666;
+            border-radius: 25px;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .settings {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .settings-title {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .settings-content {
+            display: none;
+        }
+
+        .settings-content.show {
+            display: block;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .setting-row label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .setting-row input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            margin-bottom: -180px;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.3s ease;
+            stroke: #667eea;
+            stroke-linecap: round;
+        }
+
+        .progress-ring__bg {
+            stroke: #e0e0e0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .timer-display.pulse {
+            animation: pulse 1s infinite;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍅 番茄钟</h1>
+        <p class="subtitle">专注工作，高效休息</p>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="work">工作 25分钟</button>
+            <button class="mode-btn" data-mode="short">短休 5分钟</button>
+            <button class="mode-btn" data-mode="long">长休 15分钟</button>
+        </div>
+
+        <div class="session-info">
+            <div class="session-dot" data-session="1"></div>
+            <div class="session-dot" data-session="2"></div>
+            <div class="session-dot" data-session="3"></div>
+            <div class="session-dot" data-session="4"></div>
+        </div>
+
+        <div class="timer-display" id="timer">25:00</div>
+        <div class="status" id="status">准备开始</div>
+
+        <div class="controls">
+            <button class="btn-start" id="startBtn">开始</button>
+            <button class="btn-reset" id="resetBtn">重置</button>
+        </div>
+
+        <div class="settings">
+            <div class="settings-title" id="settingsToggle">⚙️ 设置</div>
+            <div class="settings-content" id="settingsContent">
+                <div class="setting-row">
+                    <label>工作时长 (分钟)</label>
+                    <input type="number" id="workDuration" value="25" min="1" max="60">
+                </div>
+                <div class="setting-row">
+                    <label>短休时长 (分钟)</label>
+                    <input type="number" id="shortBreak" value="5" min="1" max="30">
+                </div>
+                <div class="setting-row">
+                    <label>长休时长 (分钟)</label>
+                    <input type="number" id="longBreak" value="15" min="1" max="60">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // 番茄钟核心逻辑
+        class PomodoroTimer {
+            constructor() {
+                // 时间设置（秒）
+                this.settings = {
+                    work: 25 * 60,
+                    short: 5 * 60,
+                    long: 15 * 60
+                };
+
+                // 状态
+                this.currentMode = 'work';
+                this.timeLeft = this.settings.work;
+                this.isRunning = false;
+                this.timer = null;
+                this.sessionsCompleted = 0;
+                this.totalSessions = 4;
+
+                // DOM 元素
+                this.timerDisplay = document.getElementById('timer');
+                this.statusDisplay = document.getElementById('status');
+                this.startBtn = document.getElementById('startBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.notification = document.getElementById('notification');
+
+                // 绑定事件
+                this.bindEvents();
+
+                // 更新显示
+                this.updateDisplay();
+                this.updateSessionDots();
+            }
+
+            bindEvents() {
+                // 开始/暂停按钮
+                this.startBtn.addEventListener('click', () => this.toggleTimer());
+
+                // 重置按钮
+                this.resetBtn.addEventListener('click', () => this.reset());
+
+                // 模式选择
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        if (!this.isRunning) {
+                            this.setMode(e.target.dataset.mode);
+                        }
+                    });
+                });
+
+                // 设置切换
+                document.getElementById('settingsToggle').addEventListener('click', () => {
+                    document.getElementById('settingsContent').classList.toggle('show');
+                });
+
+                // 设置输入
+                ['workDuration', 'shortBreak', 'longBreak'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', (e) => {
+                        this.updateSettings();
+                    });
+                });
+            }
+
+            updateSettings() {
+                const work = parseInt(document.getElementById('workDuration').value) || 25;
+                const short = parseInt(document.getElementById('shortBreak').value) || 5;
+                const long = parseInt(document.getElementById('longBreak').value) || 15;
+
+                this.settings = {
+                    work: work * 60,
+                    short: short * 60,
+                    long: long * 60
+                };
+
+                // 更新按钮文本
+                document.querySelector('[data-mode="work"]').textContent = `工作 ${work}分钟`;
+                document.querySelector('[data-mode="short"]').textContent = `短休 ${short}分钟`;
+                document.querySelector('[data-mode="long"]').textContent = `长休 ${long}分钟`;
+
+                if (!this.isRunning) {
+                    this.timeLeft = this.settings[this.currentMode];
+                    this.updateDisplay();
+                }
+            }
+
+            setMode(mode) {
+                this.currentMode = mode;
+                this.timeLeft = this.settings[mode];
+                this.updateDisplay();
+
+                // 更新按钮状态
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.mode === mode);
+                });
+
+                // 更新状态文本
+                const statusTexts = {
+                    work: '准备开始工作',
+                    short: '准备开始短休',
+                    long: '准备开始长休'
+                };
+                this.statusDisplay.textContent = statusTexts[mode];
+            }
+
+            toggleTimer() {
+                if (this.isRunning) {
+                    this.pause();
+                } else {
+                    this.start();
+                }
+            }
+
+            start() {
+                this.isRunning = true;
+                this.startBtn.textContent = '暂停';
+                this.startBtn.className = 'btn-pause';
+
+                const statusTexts = {
+                    work: '专注工作中...',
+                    short: '短休中...',
+                    long: '长休中...'
+                };
+                this.statusDisplay.textContent = statusTexts[this.currentMode];
+
+                this.timerDisplay.classList.add('pulse');
+
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+
+                    if (this.timeLeft <= 0) {
+                        this.timerComplete();
+                    }
+
+                    this.updateDisplay();
+                }, 1000);
+            }
+
+            pause() {
+                this.isRunning = false;
+                clearInterval(this.timer);
+                this.startBtn.textContent = '继续';
+                this.startBtn.className = 'btn-start';
+                this.statusDisplay.textContent = '已暂停';
+                this.timerDisplay.classList.remove('pulse');
+            }
+
+            reset() {
+                this.isRunning = false;
+                clearInterval(this.timer);
+                this.timeLeft = this.settings[this.currentMode];
+                this.startBtn.textContent = '开始';
+                this.startBtn.className = 'btn-start';
+                this.timerDisplay.classList.remove('pulse');
+
+                const statusTexts = {
+                    work: '准备开始工作',
+                    short: '准备开始短休',
+                    long: '准备开始长休'
+                };
+                this.statusDisplay.textContent = statusTexts[this.currentMode];
+
+                this.updateDisplay();
+            }
+
+            timerComplete() {
+                clearInterval(this.timer);
+                this.isRunning = false;
+                this.timerDisplay.classList.remove('pulse');
+
+                // 播放提示音
+                this.playSound();
+
+                // 显示通知
+                if (this.currentMode === 'work') {
+                    this.sessionsCompleted++;
+                    this.updateSessionDots();
+
+                    if (this.sessionsCompleted >= this.totalSessions) {
+                        this.showNotification('🎉 太棒了！完成一轮番茄钟，休息一下吧！');
+                        this.setMode('long');
+                        this.sessionsCompleted = 0;
+                        this.updateSessionDots();
+                    } else {
+                        this.showNotification('✅ 工作完成！休息一下吧！');
+                        this.setMode('short');
+                    }
+                } else {
+                    this.showNotification('💪 休息结束，继续加油！');
+                    this.setMode('work');
+                }
+
+                this.startBtn.textContent = '开始';
+                this.startBtn.className = 'btn-start';
+            }
+
+            updateDisplay() {
+                const minutes = Math.floor(this.timeLeft / 60);
+                const seconds = this.timeLeft % 60;
+                this.timerDisplay.textContent =
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            updateSessionDots() {
+                document.querySelectorAll('.session-dot').forEach((dot, index) => {
+                    dot.classList.remove('completed', 'current');
+                    if (index < this.sessionsCompleted) {
+                        dot.classList.add('completed');
+                    } else if (index === this.sessionsCompleted && this.currentMode === 'work') {
+                        dot.classList.add('current');
+                    }
+                });
+            }
+
+            showNotification(message) {
+                this.notification.textContent = message;
+                this.notification.classList.add('show');
+
+                setTimeout(() => {
+                    this.notification.classList.remove('show');
+                }, 3000);
+            }
+
+            playSound() {
+                // 创建简单的提示音
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            }
+        }
+
+        // 初始化番茄钟
+        const pomodoro = new PomodoroTimer();
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "settings": {
+    "work_minutes": 1,
+    "short_break": 5,
+    "long_break": 15,
+    "rounds": 4,
+    "theme": "light",
+    "sound_enabled": true
+  },
+  "records": [
+    {
+      "date": "2026-06-09",
+      "time": "10:06",
+      "task": "未命名任务",
+      "duration": 25
+    },
+    {
+      "date": "2026-06-09",
+      "time": "10:07",
+      "task": "未命名任务",
+      "duration": 1
+    }
+  ]
+}
